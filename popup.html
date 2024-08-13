@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Form Filler</title>
+    <link rel="stylesheet" type="text/css" href="styles.css">
+    <style>
+        .error-message {
+            color: red;
+            font-size: 12px;
+            display: none; /* Na początku ukrywamy komunikaty błędów */
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Form Filler</h2>
+
+    <select id="profileSelect">
+        <option value="">Select a profile</option>
+    </select>
+
+    <div class="button-container">
+        <button id="applyProfile">Apply Profile</button>
+        <button id="createProfile">Create Profile</button>
+        <button id="deleteProfile">Delete Profile</button>
+        <button id="showSuggestions">Show Suggestions</button>
+        <!-- New Advanced Settings Button -->
+        <button id="advancedSettingsToggle">Advanced settings</button>
+    </div>
+    
+    <!-- Hidden section for advanced settings -->
+    <div id="advancedSettings">
+        <button id="showModelData">Show Model</button>
+        <button id="exportProfiles">Export Profiles</button>
+        <button id="importProfiles">Import Profiles</button>
+    </div>
+    
+
+    <div id="profileDetails"></div>
+
+    <div id="suggestionsContainer" style="display: none;"></div>
+
+    <div id="modelDataContainer" style="display: none;"></div>
+
+    <div id="profileForm" style="display: none;">
+        <h3>Create/Edit Profile</h3>
+        <input type="text" id="profileName" placeholder="Profile Name">
+
+        <input type="text" id="emailInput" placeholder="Email">
+        <span class="error-message" id="emailError"></span>
+
+        <input type="text" id="phoneInput" placeholder="Phone">
+        <span class="error-message" id="phoneError"></span>
+
+        <input type="text" id="firstNameInput" placeholder="First Name">
+        <span class="error-message" id="firstNameError"></span>
+
+        <input type="text" id="lastNameInput" placeholder="Last Name">
+        <span class="error-message" id="lastNameError"></span>
+
+        <input type="text" id="addressInput" placeholder="Address">
+        <span class="error-message" id="addressError"></span>
+
+        <input type="text" id="cityInput" placeholder="City">
+        <span class="error-message" id="cityError"></span>
+
+        <input type="text" id="zipInput" placeholder="ZIP">
+        <span class="error-message" id="zipError"></span>
+
+        <button id="saveProfile">Save Profile</button>
+    </div>
+
+    <div id="savedDataPreview"></div>
+
+    <input type="file" id="importFile" style="display: none;">
+
+    <script src="popup.js"></script>
+</body>
+</html>

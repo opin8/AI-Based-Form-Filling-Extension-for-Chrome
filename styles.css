@@ -1,0 +1,119 @@
+:root {
+    --primary-color: #3498db;
+    --secondary-color: #2c3e50;
+    --background-color: #ecf0f1;
+    --text-color: #34495e;
+    --border-color: #bdc3c7;
+    --button-hover-color: #2980b9;
+}
+
+body {
+    background-color: var(--background-color);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    margin: 0;
+    padding: 15px;
+    color: var(--text-color);
+    width: 300px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+h2, h3 {
+    color: var(--secondary-color);
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 10px;
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+}
+
+input, select {
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin: 5px 0;
+    padding: 6px;
+    background-color: white;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin: 5px 0;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    font-size: 0.9em;
+    width: 100%;
+}
+
+button:hover {
+    background-color: var(--button-hover-color);
+}
+
+.button-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+#profileForm, #suggestionsContainer, #profileDetails, #savedDataPreview, #modelDataContainer {
+    background-color: white;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 15px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    display: none;
+}
+
+.suggestion-box {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    font-size: 14px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.suggestion-box div {
+    padding: 2px; /* Dodajemy 2px nad i pod tekstem */
+    white-space: nowrap; /* Upewniamy się, że tekst się nie zawija */
+}
+
+
+
+#profileSelect {
+    margin-bottom: 15px;
+}
+
+#importFile {
+    display: none;
+}
+
+#advancedSettingsToggle {
+    background: none;
+    border: none;
+    color: black;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 10px;
+    padding: 0;
+    margin: 0;
+    display: inline; 
+    width: auto;
+    text-align: left; /* Wyrównuje tekst do lewej */
+    margin-right: 63px;
+}
+
+
+#advancedSettings {
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    display: none;
+}
+
