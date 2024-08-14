@@ -18,43 +18,36 @@ class FormFillerModel {
         });
     }
 
-    // Walidacja numeru telefonu
     validatePhoneNumber(phone) {
         const phoneRegex = /^(\+48)?\d{9}$/;
         return phoneRegex.test(phone.replace(/\s+/g, ''));
     }
 
-    // Walidacja adresu e-mail
     validateEmail(email) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
     }
 
-    // Walidacja imienia
     validateFirstName(firstName) {
         const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ]+$/;
         return firstName.length >= 2 && nameRegex.test(firstName);
     }
 
-    // Walidacja nazwiska
     validateLastName(lastName) {
         const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ]+$/;
         return lastName.length >= 2 && nameRegex.test(lastName);
     }
 
-    // Walidacja kodu pocztowego
     validateZipCode(zipCode) {
         const zipRegex = /^\d{2}-\d{3}$/; // Polski format kodu pocztowego
         return zipRegex.test(zipCode);
     }
 
-    // Walidacja adresu
     validateAddress(address) {
         const addressRegex = /^[A-Za-z0-9\s,.'-]{3,}$/;
         return addressRegex.test(address);
     }
 
-    // Walidacja miasta
     validateCity(city) {
         const cityRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]+$/;
         return city.length >= 2 && cityRegex.test(city);
@@ -86,7 +79,6 @@ class FormFillerModel {
             case 'city':
                 if (!this.validateCity(fieldValue)) return;
                 break;
-            // Dodaj inne walidacje w razie potrzeby
         }
 
         if (!this.trainingData[fieldName]) {
@@ -97,7 +89,7 @@ class FormFillerModel {
 
         this.updateMarkovChain(fieldName);
         this.updateCrossFieldChains(fieldName, fieldValue);
-        this.saveTrainingData(); // Upewnij się, że dane są zapisywane
+        this.saveTrainingData();
     }
 
     saveTrainingData() {
@@ -113,7 +105,7 @@ class FormFillerModel {
         if (!this.markovChains[fieldName]) {
             this.markovChains[fieldName] = {};
         }
-
+    
         for (let i = 0; i < data.length - 1; i++) {
             const current = data[i];
             const next = data[i + 1];
@@ -124,15 +116,24 @@ class FormFillerModel {
                 this.markovChains[fieldName][current][next] = 0;
             }
             this.markovChains[fieldName][current][next]++;
+    
+            // Limitowanie liczby powiązań do 20 ostatnich
+            const keys = Object.keys(this.markovChains[fieldName][current]);
+            if (keys.length > 20) {
+                keys.slice(0, keys.length - 20).forEach(key => {
+                    delete this.markovChains[fieldName][current][key];
+                });
+            }
         }
     }
+    
 
     updateCrossFieldChains(fieldName, fieldValue) {
         const relevantFields = ['firstName', 'lastName', 'email', 'phone']; // Lista powiązanych pól
-
+    
         relevantFields.forEach(relevantField => {
             if (relevantField === fieldName) return;
-
+    
             const relatedValue = this.trainingData[relevantField] ? this.trainingData[relevantField][this.trainingData[relevantField].length - 1] : null;
             if (relatedValue) {
                 if (!this.crossFieldChains[fieldName]) {
@@ -145,9 +146,18 @@ class FormFillerModel {
                     this.crossFieldChains[fieldName][relatedValue][fieldValue] = 0;
                 }
                 this.crossFieldChains[fieldName][relatedValue][fieldValue]++;
+    
+                // Limitowanie liczby powiązań do 20 ostatnich
+                const keys = Object.keys(this.crossFieldChains[fieldName][relatedValue]);
+                if (keys.length > 20) {
+                    keys.slice(0, keys.length - 20).forEach(key => {
+                        delete this.crossFieldChains[fieldName][relatedValue][key];
+                    });
+                }
             }
         });
     }
+    
 
     generateSuggestions(fieldType) {
         let suggestions = [];
@@ -193,7 +203,7 @@ class FormFillerModel {
     getAllSuggestions() {
         const allSuggestions = {};
         for (let fieldType in this.trainingData) {
-            let uniqueValues = new Set(this.trainingData[fieldType]); // Użycie Set, aby uzyskać unikalne wartości
+            let uniqueValues = new Set(this.trainingData[fieldType]);
             allSuggestions[fieldType] = uniqueValues;
         }
         return allSuggestions;

@@ -130,43 +130,148 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('zipInput').value = '';
         resetErrorMessages(); // Resetujemy błędy przy otwieraniu formularza
     });
-
+    
     document.getElementById('saveProfile').addEventListener('click', function() {
-        const profileName = document.getElementById('profileName').value;
+        const profileName = document.getElementById('profileName').value.trim();
+        const email = document.getElementById('emailInput').value.trim();
+        const phone = document.getElementById('phoneInput').value.trim();
+        const firstName = document.getElementById('firstNameInput').value.trim();
+        const lastName = document.getElementById('lastNameInput').value.trim();
+        const address = document.getElementById('addressInput').value.trim();
+        const city = document.getElementById('cityInput').value.trim();
+        const zip = document.getElementById('zipInput').value.trim();
+    
+        let valid = true;
+    
+        // Resetowanie komunikatów błędów
+        resetErrorMessages();
+    
+        // Sprawdzenie, czy nazwa profilu jest wpisana
         if (!profileName) {
             alert('Please enter a profile name');
             return;
         }
-
-        const newProfile = {
-            name: profileName,
-            email: document.getElementById('emailInput').value,
-            phone: document.getElementById('phoneInput').value,
-            firstName: document.getElementById('firstNameInput').value,
-            lastName: document.getElementById('lastNameInput').value,
-            address: document.getElementById('addressInput').value,
-            city: document.getElementById('cityInput').value,
-            zip: document.getElementById('zipInput').value
-        };
-
-        chrome.runtime.sendMessage({action: 'saveProfile', profile: newProfile}, function(response) {
-            if (chrome.runtime.lastError) {
-                console.error('Error saving profile:', chrome.runtime.lastError);
-                alert('Error saving profile');
-            } else if (response && response.status === 'Profile saved') {
-                alert('Profile saved successfully');
-                loadProfileList();
-                toggleSection('profileForm');
-                // Clear the form
-                var formElement = document.getElementById('profileForm');
-                if (formElement && formElement.tagName === 'FORM') {
-                    formElement.reset();
+    
+        // Walidacja emaila
+        if (!validateEmail(email)) {
+            showError('emailError', 'Please enter a valid email address.');
+            valid = false;
+        }
+    
+        // Walidacja numeru telefonu
+        if (!validatePhoneNumber(phone)) {
+            showError('phoneError', 'Please enter a valid phone number with 9 digits.');
+            valid = false;
+        }
+    
+        // Walidacja imienia
+        if (!validateFirstName(firstName)) {
+            showError('firstNameError', 'First name must be at least 2 characters and contain only letters.');
+            valid = false;
+        }
+    
+        // Walidacja nazwiska
+        if (!validateLastName(lastName)) {
+            showError('lastNameError', 'Last name must be at least 2 characters and contain only letters.');
+            valid = false;
+        }
+    
+        // Walidacja adresu
+        if (!validateAddress(address)) {
+            showError('addressError', 'Address must contain letters and valid format "StreetName 123" or "StreetName 123/45".');
+            valid = false;
+        }
+    
+        // Walidacja miasta
+        if (!validateCity(city)) {
+            showError('cityError', 'City name must be at least 2 characters and contain only letters.');
+            valid = false;
+        }
+    
+        // Walidacja kodu pocztowego
+        if (!validateZipCode(zip)) {
+            showError('zipError', 'ZIP code must be in the format XX-XXX.');
+            valid = false;
+        }
+    
+        // Jeśli wszystkie pola są poprawne, profil może zostać zapisany
+        if (valid) {
+            const newProfile = {
+                name: profileName,
+                email: email,
+                phone: phone,
+                firstName: firstName,
+                lastName: lastName,
+                address: address,
+                city: city,
+                zip: zip
+            };
+    
+            chrome.runtime.sendMessage({action: 'saveProfile', profile: newProfile}, function(response) {
+                if (chrome.runtime.lastError) {
+                    console.error('Error saving profile:', chrome.runtime.lastError);
+                    alert('Error saving profile');
+                } else if (response && response.status === 'Profile saved') {
+                    alert('Profile saved successfully');
+                    loadProfileList();
+                    toggleSection('profileForm');
+                    // Wyczyść formularz po zapisaniu
+                    resetErrorMessages(); // Ukryj komunikaty błędów po zapisaniu
+                    document.getElementById('profileForm').reset();
+                } else {
+                    alert('Error saving profile');
                 }
-            } else {
-                alert('Error saving profile');
-            }
-        });
+            });
+        }
     });
+    
+    function resetErrorMessages() {
+        document.querySelectorAll('.error-message').forEach(el => el.style.display = 'none');
+    }
+    
+    function showError(elementId, message) {
+        const errorElement = document.getElementById(elementId);
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+    }
+    
+    // Funkcje walidacji
+    function validateEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+    
+    function validatePhoneNumber(phone) {
+        const phoneRegex = /^(\+48)?\d{9}$/;
+        return phoneRegex.test(phone.replace(/\s+/g, ''));
+    }
+    
+    function validateFirstName(firstName) {
+        const nameRegex = /^[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžæÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð ,.'-]+$/u;
+        return firstName.length >= 2 && nameRegex.test(firstName);
+    }
+    
+    function validateLastName(lastName) {
+        const nameRegex = /^[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžæÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð ,.'-]+$/u;
+        return lastName.length >= 2 && nameRegex.test(lastName);
+    }
+    
+    
+    function validateAddress(address) {
+        const addressRegex = /^[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžæÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð]+\s\d+[\/]?\d*$/;
+        return addressRegex.test(address);
+    }
+    
+    function validateCity(city) {
+        const cityRegex = /^[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžæÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð ,.'-]+$/u;
+        return city.length >= 2 && cityRegex.test(city);
+    }
+    
+    function validateZipCode(zip) {
+        const zipRegex = /^\d{2}-\d{3}$/;
+        return zipRegex.test(zip);
+    }
+    
 
     document.getElementById('deleteProfile').addEventListener('click', function() {
         if (currentProfile) {

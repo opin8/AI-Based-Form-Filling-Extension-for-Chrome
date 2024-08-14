@@ -53,7 +53,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             });
         });
 
-        return true; // Indicate that the response is asynchronous
+        return true;
     }
 
     if (request.action === 'saveProfile') {
@@ -65,7 +65,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 sendResponse({status: 'Profile saved'});
             });
         });
-        return true; // Indicates that the response is asynchronous
+        return true;
     }
     
     
@@ -77,7 +77,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 sendResponse({profiles: result.profiles || {}});
             }
         });
-        return true; // Indicates that the response is asynchronous
+        return true;
     }
     
 });
