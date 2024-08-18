@@ -7,16 +7,13 @@ class FormFillerModel {
         this.loadTrainingData();
     }
 
-    loadTrainingData() {
-        return new Promise((resolve) => {
-            chrome.storage.local.get(['trainingData', 'markovChains', 'crossFieldChains'], (result) => {
-                this.trainingData = result.trainingData || {};
-                this.markovChains = result.markovChains || {};
-                this.crossFieldChains = result.crossFieldChains || {};
-                resolve();
-            });
-        });
+    async loadTrainingData() {
+        const trainingData = await retrieveDecryptedData('trainingData');
+        this.trainingData = trainingData?.trainingData || {};
+        this.markovChains = trainingData?.markovChains || {};
+        this.crossFieldChains = trainingData?.crossFieldChains || {};
     }
+    
 
     validatePhoneNumber(phone) {
         const phoneRegex = /^(\+48)?\d{9}$/;
@@ -29,12 +26,12 @@ class FormFillerModel {
     }
 
     validateFirstName(firstName) {
-        const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ]+$/;
+        const nameRegex = /^[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžæÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð ,.'-]+$/u;
         return firstName.length >= 2 && nameRegex.test(firstName);
     }
-
+    
     validateLastName(lastName) {
-        const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ]+$/;
+        const nameRegex = /^[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžæÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð ,.'-]+$/u;
         return lastName.length >= 2 && nameRegex.test(lastName);
     }
 
@@ -92,12 +89,13 @@ class FormFillerModel {
         this.saveTrainingData();
     }
 
-    saveTrainingData() {
-        chrome.storage.local.set({
+    async saveTrainingData() {
+        const data = {
             trainingData: this.trainingData,
             markovChains: this.markovChains,
             crossFieldChains: this.crossFieldChains
-        });
+        };
+        await storeEncryptedData('trainingData', data);
     }
 
     updateMarkovChain(fieldName) {
@@ -222,8 +220,8 @@ function getFieldType(element) {
     const fieldPatterns = {
         email: /\b(email|mail|e-?mail|username|user_name|user-name|fbclc_userName)\b/i,
         username: /\b(user(name)?|login|user_name|user-name)\b/i,
-        firstName: /\b(first(name)?|imie|fname|given(name)?|first_name|first-name|tbname)\b/i,
-        lastName: /\b(last(name)?|surname|nazwisko|lname|family(name)?|last_name|last-name|tbsurname)\b/i,
+        firstName: /\b(first(name)?|imie|fname|given(name)?|first_name|first-name|tbname|userfirstname)\b/i,
+        lastName: /\b(last(name)?|surname|nazwisko|lname|family(name)?|last_name|last-name|tbsurname|userlastname)\b/i,
         address: /\b(address|adres|addr|tbaddress)\b/i,
         phone: /\b(phone|tel|telefon|mobile|cell(phone)?|number|numertelefonu|tbphone|tbcellphone)\b/i,
         city: /\b(city|miasto|tbcity)\b/i,
@@ -255,7 +253,7 @@ function getFieldType(element) {
     return null;
 }
 
-function handleInputBlur(event) {
+async function handleInputBlur(event) {
     const target = event.target;
     if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') return;
 
@@ -274,13 +272,10 @@ function handleInputBlur(event) {
         console.log('Updating model for field type:', fieldType, 'with value:', fieldValue);
         formFillerModel.updateModel(fieldType, fieldValue);
 
-        chrome.storage.local.get(['lastUsedValues'], function(result) {
-            const lastUsedValues = result.lastUsedValues || {};
-            lastUsedValues[fieldType] = fieldValue;
-            chrome.storage.local.set({lastUsedValues: lastUsedValues}, () => {
-                console.log('Saved to lastUsedValues:', fieldType, fieldValue);
-            });
-        });
+        const lastUsedValues = await retrieveDecryptedData('lastUsedValues') || {};
+        lastUsedValues[fieldType] = fieldValue;
+        await storeEncryptedData('lastUsedValues', lastUsedValues);
+        console.log('Saved to lastUsedValues:', fieldType, fieldValue);
     }
 }
 
@@ -370,11 +365,6 @@ function showSuggestions(target, fieldType) {
     return suggestionBox;
 }
 
-
-
-
-
-
 function isFieldFillable(element) {
     if (element.tagName === 'INPUT') {
         const excludedTypes = ['submit', 'reset', 'button', 'image', 'file', 'hidden', 'radio', 'checkbox'];
@@ -386,19 +376,17 @@ function isFieldFillable(element) {
 document.addEventListener('blur', handleInputBlur, true);
 document.addEventListener('focus', handleInputFocus, true);
 
-formFillerModel.loadTrainingData().then(() => {
-    chrome.storage.local.get(['lastUsedValues'], function(result) {
-        const lastUsedValues = result.lastUsedValues || {};
-        for (let fieldName in lastUsedValues) {
-            const input = document.querySelector(`input[name="${fieldName}"], input[id="${fieldName}"]`);
-            if (input) {
-                input.value = lastUsedValues[fieldName];
-            }
+formFillerModel.loadTrainingData().then(async () => {
+    const lastUsedValues = await retrieveDecryptedData('lastUsedValues') || {};
+    for (let fieldName in lastUsedValues) {
+        const input = document.querySelector(`input[name="${fieldName}"], input[id="${fieldName}"]`);
+        if (input) {
+            input.value = lastUsedValues[fieldName];
         }
-    });
+    }
 });
 
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(async function(request, sender, sendResponse) {
     console.log('Received message in content script:', request);
 
     if (request.action === 'fillForm') {
@@ -423,9 +411,8 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         });
         return true; // Indicate asynchronous response
     } else if (request.action === 'getSavedData') {
-        chrome.storage.local.get(['lastUsedValues'], function(result) {
-            sendResponse({savedData: result.lastUsedValues || {}});
-        });
+        const result = await retrieveDecryptedData('lastUsedValues') || {};
+        sendResponse({ savedData: result });
         return true;
     } else if (request.action === 'getModelData') {
         sendResponse({modelData: {
@@ -451,11 +438,6 @@ function fillForm(profile) {
             console.log(`Filled ${fieldType} with value ${profile[fieldType]}`);
         }
     });
-}
-
-function stripAspNetPrefix(name) {
-    const parts = name.split('$');
-    return parts[parts.length - 1];
 }
 
 let popupVisible = false;

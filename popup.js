@@ -1,8 +1,8 @@
 let currentProfile = null;
 
-function loadProfileList() {
-    chrome.storage.local.get(['profiles'], function(result) {
-        const profiles = result.profiles || {};
+async function loadProfileList() {
+    try {
+        const profiles = await retrieveDecryptedData('profiles');
         const select = document.getElementById('profileSelect');
         select.innerHTML = '<option value="">Select a profile</option>';
         for (let profileName in profiles) {
@@ -12,8 +12,11 @@ function loadProfileList() {
             select.appendChild(option);
         }
         console.log('Profiles loaded:', profiles);
-    });
+    } catch (error) {
+        console.error('Error loading profiles:', error);
+    }
 }
+
 
 function displayProfileDetails(profile) {
     const detailsDiv = document.getElementById('profileDetails');
@@ -41,12 +44,16 @@ function toggleSection(sectionId) {
     }
 }
 
-function updateSavedDataPreview() {
-    chrome.storage.local.get(['trainingData', 'lastUsedValues'], function(result) {
+async function updateSavedDataPreview() {
+    try {
+        const result = await retrieveDecryptedData('trainingData') || {};  // Provide an empty object as a fallback
+        const lastUsedValues = result.lastUsedValues || {};  // Default to an empty object if null or undefined
+        const trainingData = result.trainingData || {};  // Default to an empty object if null or undefined
+        
         const previewDiv = document.getElementById('savedDataPreview');
         previewDiv.innerHTML = '<h3>Saved Data:</h3>';
         
-        const savedData = {...result.lastUsedValues, ...result.trainingData};
+        const savedData = {...lastUsedValues, ...trainingData};
         
         if (Object.keys(savedData).length > 0) {
             for (let fieldName in savedData) {
@@ -69,28 +76,33 @@ function updateSavedDataPreview() {
         } else {
             previewDiv.innerHTML += '<p>No saved data available</p>';
         }
-    });
+    } catch (error) {
+        console.error('Error updating saved data preview:', error);
+    }
 }
+
 
 document.addEventListener('DOMContentLoaded', function() {
     loadProfileList();
     updateSavedDataPreview();
 
-    document.getElementById('profileSelect').addEventListener('change', function() {
+    document.getElementById('profileSelect').addEventListener('change', async function() {
         const profileName = this.value;
         if (profileName) {
-            chrome.storage.local.get(['profiles'], function(result) {
-                const profiles = result.profiles || {};
+            try {
+                const profiles = await retrieveDecryptedData('profiles');
                 currentProfile = profiles[profileName];
                 console.log('Retrieved profile:', currentProfile);
                 displayProfileDetails(currentProfile);
-            });
+            } catch (error) {
+                console.error('Error retrieving profile:', error);
+            }
         } else {
             currentProfile = null;
             displayProfileDetails(null);
         }
     });
-
+    
     document.getElementById('applyProfile').addEventListener('click', function() {
         if (currentProfile) {
             chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
@@ -143,52 +155,43 @@ document.addEventListener('DOMContentLoaded', function() {
     
         let valid = true;
     
-        // Resetowanie komunikatów błędów
         resetErrorMessages();
     
-        // Sprawdzenie, czy nazwa profilu jest wpisana
         if (!profileName) {
             alert('Please enter a profile name');
             return;
         }
     
-        // Walidacja emaila
         if (!validateEmail(email)) {
             showError('emailError', 'Please enter a valid email address.');
             valid = false;
         }
     
-        // Walidacja numeru telefonu
         if (!validatePhoneNumber(phone)) {
             showError('phoneError', 'Please enter a valid phone number with 9 digits.');
             valid = false;
         }
     
-        // Walidacja imienia
         if (!validateFirstName(firstName)) {
             showError('firstNameError', 'First name must be at least 2 characters and contain only letters.');
             valid = false;
         }
     
-        // Walidacja nazwiska
         if (!validateLastName(lastName)) {
             showError('lastNameError', 'Last name must be at least 2 characters and contain only letters.');
             valid = false;
         }
     
-        // Walidacja adresu
         if (!validateAddress(address)) {
             showError('addressError', 'Address must contain letters and valid format "StreetName 123" or "StreetName 123/45".');
             valid = false;
         }
     
-        // Walidacja miasta
         if (!validateCity(city)) {
             showError('cityError', 'City name must be at least 2 characters and contain only letters.');
             valid = false;
         }
     
-        // Walidacja kodu pocztowego
         if (!validateZipCode(zip)) {
             showError('zipError', 'ZIP code must be in the format XX-XXX.');
             valid = false;
@@ -209,19 +212,20 @@ document.addEventListener('DOMContentLoaded', function() {
     
             chrome.runtime.sendMessage({action: 'saveProfile', profile: newProfile}, function(response) {
                 if (chrome.runtime.lastError) {
-                    console.error('Error saving profile:', chrome.runtime.lastError);
-                    alert('Error saving profile');
+                    console.error('Error saving profile:', chrome.runtime.lastError.message || chrome.runtime.lastError);
+                    alert('Error saving profile: ' + (chrome.runtime.lastError.message || 'Unknown error'));
                 } else if (response && response.status === 'Profile saved') {
                     alert('Profile saved successfully');
                     loadProfileList();
                     toggleSection('profileForm');
-                    // Wyczyść formularz po zapisaniu
-                    resetErrorMessages(); // Ukryj komunikaty błędów po zapisaniu
+                    // Clear the form after saving
+                    resetErrorMessages(); // Hide error messages after saving
                     document.getElementById('profileForm').reset();
                 } else {
                     alert('Error saving profile');
                 }
             });
+            
         }
     });
     
@@ -273,49 +277,46 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
 
-    document.getElementById('deleteProfile').addEventListener('click', function() {
+    document.getElementById('deleteProfile').addEventListener('click', async function() {
         if (currentProfile) {
-            chrome.storage.local.get(['profiles'], function(result) {
-                let profiles = result.profiles || {};
+            try {
+                const profiles = await retrieveDecryptedData('profiles');
                 if (profiles[currentProfile.name]) {
                     delete profiles[currentProfile.name];
-                    chrome.storage.local.set({profiles: profiles}, function() {
-                        if (chrome.runtime.lastError) {
-                            console.error('Error deleting profile:', chrome.runtime.lastError);
-                            alert('Error deleting profile');
-                        } else {
-                            alert('Profile deleted successfully');
-                            currentProfile = null;
-                            loadProfileList();
-                            displayProfileDetails(null);
-                        }
-                    });
+                    await storeEncryptedData('profiles', profiles);
+                    alert('Profile deleted successfully');
+                    currentProfile = null;
+                    loadProfileList();
+                    displayProfileDetails(null);
                 } else {
                     alert('Profile not found');
                 }
-            });
+            } catch (error) {
+                console.error('Error deleting profile:', error);
+            }
         } else {
             alert('Please select a profile to delete');
         }
     });
+    
 
-    document.getElementById('showSuggestions').addEventListener('click', function() {
-        // Pobieranie danych z chrome.storage.local
-        chrome.storage.local.get(['markovChains', 'trainingData'], function(result) {
+    document.getElementById('showSuggestions').addEventListener('click', async function() {
+        try {
+            const result = await retrieveDecryptedData('trainingData');
             const suggestionsContainer = document.getElementById('suggestionsContainer');
             suggestionsContainer.innerHTML = '<h3>Suggestions:</h3>';
             const trainingData = result.trainingData || {};
             const markovChains = result.markovChains || {};
-
+    
             if (Object.keys(trainingData).length === 0) {
                 suggestionsContainer.innerHTML += '<p>No suggestions available</p>';
                 return;
             }
-
+    
             for (let fieldType in trainingData) {
                 const valueCount = {};
-
-                // Jeśli istnieją dane w markovChains, używamy ich
+    
+                // If markovChains have data, use it
                 if (markovChains[fieldType]) {
                     for (let currentValue in markovChains[fieldType]) {
                         for (let nextValue in markovChains[fieldType][currentValue]) {
@@ -327,57 +328,69 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                 }
-
-                // Dodajemy brakujące wartości z trainingData (jeśli jakiekolwiek)
+    
+                // Add any missing values from trainingData
                 trainingData[fieldType].forEach(value => {
                     if (!valueCount[value]) {
                         valueCount[value] = 1;
                     }
                 });
-
-                // Sortowanie wartości według częstości występowania (malejąco)
+    
+                // Sort values by frequency (descending)
                 const sortedValues = Object.keys(valueCount).sort((a, b) => valueCount[b] - valueCount[a]);
-
-                // Pobieranie maksymalnie 5 najczęściej używanych wartości
+    
+                // Get up to 5 most frequent values
                 const topSuggestions = sortedValues.slice(0, 5);
-
+    
                 if (topSuggestions.length > 0) {
                     const fieldDiv = document.createElement('div');
                     fieldDiv.innerHTML = `<strong>${fieldType}:</strong> ${topSuggestions.join(', ')}`;
                     suggestionsContainer.appendChild(fieldDiv);
                 }
             }
-
+    
             if (suggestionsContainer.innerHTML === '<h3>Suggestions:</h3>') {
                 suggestionsContainer.innerHTML += '<p>No suggestions available</p>';
             }
-        });
+        } catch (error) {
+            console.error('Error showing suggestions:', error);
+        }
         toggleSection('suggestionsContainer');
     });
+    
 
-    document.getElementById('showModelData').addEventListener('click', function() {
-        chrome.storage.local.get(['trainingData', 'markovChains', 'crossFieldChains'], function(result) {
-            const modelDataContainer = document.getElementById('modelDataContainer');
-            modelDataContainer.innerHTML = '<h3>Model Data:</h3>';
+document.getElementById('showModelData').addEventListener('click', async function() {
+    try {
+        const result = await retrieveDecryptedData('trainingData');  // Ensure result is at least an empty object
+        const modelDataContainer = document.getElementById('modelDataContainer');
+        modelDataContainer.innerHTML = '<h3>Model Data:</h3>';
 
-            if (!result.trainingData && !result.markovChains && !result.crossFieldChains) {
-                modelDataContainer.innerHTML += '<p>No model data available</p>';
-                return;
-            }
+        if (
+            (!result.trainingData || Object.keys(result.trainingData).length === 0) &&
+            (!result.markovChains || Object.keys(result.markovChains).length === 0) &&
+            (!result.crossFieldChains || Object.keys(result.crossFieldChains).length === 0)
+        ) {
+            modelDataContainer.innerHTML += '<p>No model data available</p>';
+            return;
+        }
 
-            const modelData = {
-                trainingData: result.trainingData || {},
-                markovChains: result.markovChains || {},
-                crossFieldChains: result.crossFieldChains || {}
-            };
+        const modelData = {
+            trainingData: result.trainingData || {},
+            markovChains: result.markovChains || {},
+            crossFieldChains: result.crossFieldChains || {}
+        };
 
-            const pre = document.createElement('pre');
-            pre.textContent = JSON.stringify(modelData, null, 2);
-            modelDataContainer.appendChild(pre);
+        const pre = document.createElement('pre');
+        pre.textContent = JSON.stringify(modelData, null, 2);
+        modelDataContainer.appendChild(pre);
 
-            toggleSection('modelDataContainer');
-        });
-    });
+        toggleSection('modelDataContainer');
+    } catch (error) {
+        console.error('Error showing model data:', error);
+    }
+});
+
+
 
     document.getElementById('exportProfiles').addEventListener('click', function() {
         chrome.runtime.sendMessage({action: 'loadProfiles'}, function(response) {
@@ -407,15 +420,15 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('importFile').click();
     });
 
-    document.getElementById('importFile').addEventListener('change', function(event) {
+    document.getElementById('importFile').addEventListener('change', async function(event) {
         const file = event.target.files[0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
                     const importedProfiles = JSON.parse(e.target.result);
-
-                    // Sprawdź, czy importowane profile mają odpowiednią strukturę
+    
+                    // Check if imported profiles have the right structure
                     for (let profileName in importedProfiles) {
                         const profile = importedProfiles[profileName];
                         if (!profile.name || !profile.email || !profile.firstName || !profile.lastName || !profile.address || !profile.city || !profile.zip) {
@@ -423,26 +436,33 @@ document.addEventListener('DOMContentLoaded', function() {
                             return;
                         }
                     }
-
-                    chrome.storage.local.get(['profiles'], function(result) {
-                        const currentProfiles = result.profiles || {};
-                        const mergedProfiles = {...currentProfiles, ...importedProfiles};
-
-                        chrome.storage.local.set({profiles: mergedProfiles}, function() {
-                            if (chrome.runtime.lastError) {
-                                console.error('Error saving imported profiles:', chrome.runtime.lastError.message);
-                                alert('Error importing profiles');
-                            } else {
-                                alert('Profiles imported successfully');
-                                loadProfileList();
-                            }
-                        });
-                    });
+    
+                    const currentProfiles = await retrieveDecryptedData('profiles') || {};
+                    const mergedProfiles = {...currentProfiles, ...importedProfiles};
+    
+                    await storeEncryptedData('profiles', mergedProfiles);
+                    alert('Profiles imported successfully');
+                    loadProfileList();
                 } catch (error) {
                     alert('Error importing profiles: ' + error.message);
                 }
             };
             reader.readAsText(file);
         }
+    });
+    
+
+    document.getElementById('clearStorage').addEventListener('click', function() {
+        chrome.storage.local.clear(() => {
+            if (chrome.runtime.lastError) {
+                console.error("Error clearing local storage:", chrome.runtime.lastError);
+                alert('Error clearing local storage');
+            } else {
+                console.log("Local storage cleared successfully.");
+                alert('Local storage cleared successfully');
+                loadProfileList();
+                updateSavedDataPreview();
+            }
+        });
     });
 });
