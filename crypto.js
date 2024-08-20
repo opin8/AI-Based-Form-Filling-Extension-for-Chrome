@@ -1,13 +1,12 @@
 // crypto.js
 
-// Function to generate a new encryption key
 async function generateKey() {
     return self.crypto.subtle.generateKey(
         {
             name: "AES-GCM",
-            length: 256, // 256-bit key
+            length: 256,
         },
-        true, // Key can be exported and used for encryption/decryption
+        true,
         ["encrypt", "decrypt"]
     );
 }
@@ -45,7 +44,7 @@ async function encryptData(plaintext) {
         throw new Error('Encryption key not found.');
     }
     const encoded = new TextEncoder().encode(plaintext);
-    const iv = self.crypto.getRandomValues(new Uint8Array(12)); // 12-byte initialization vector
+    const iv = self.crypto.getRandomValues(new Uint8Array(12));
     const ciphertext = await self.crypto.subtle.encrypt(
         { name: "AES-GCM", iv: iv },
         key,

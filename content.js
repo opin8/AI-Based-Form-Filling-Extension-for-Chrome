@@ -157,36 +157,53 @@ class FormFillerModel {
     }
     
 
-    generateSuggestions(fieldType) {
+    generateSuggestions(fieldType, currentFormData = {}) {
         let suggestions = [];
         const occurrenceMap = {};
     
-        // Pobierz ostatnią wartość wprowadzaną do danego pola
-        if (this.trainingData[fieldType] && this.trainingData[fieldType].length > 0) {
-            const currentValue = this.trainingData[fieldType][this.trainingData[fieldType].length - 1];
-    
-            // Dodaj sugestie z markovChains
-            if (this.markovChains[fieldType] && this.markovChains[fieldType][currentValue]) {
-                const possibleNext = this.markovChains[fieldType][currentValue];
+        // Przechodzimy przez wszystkie wprowadzone wartości w currentFormData
+        for (const [previousFieldType, previousValue] of Object.entries(currentFormData)) {
+            if (this.crossFieldChains[fieldType] && this.crossFieldChains[fieldType][previousValue]) {
+                const possibleNext = this.crossFieldChains[fieldType][previousValue];
                 for (const suggestion in possibleNext) {
                     const count = possibleNext[suggestion];
                     occurrenceMap[suggestion] = (occurrenceMap[suggestion] || 0) + count;
                 }
             }
+        }
+
+        // Przenosimy wartości z occurrenceMap do tablicy suggestions
+        suggestions = Object.keys(occurrenceMap).sort((a, b) => occurrenceMap[b] - occurrenceMap[a]);
     
-            // Dodaj wszystkie unikalne wartości z trainingData
-            this.trainingData[fieldType].forEach(value => {
-                if (!occurrenceMap[value]) {
-                    occurrenceMap[value] = 1; // Dodaj unikalne wartości z trainingData
-                }
-            });
-    
-            // Sortuj sugestie według częstości występowania
-            suggestions = Object.keys(occurrenceMap).sort((a, b) => occurrenceMap[b] - occurrenceMap[a]).slice(0, 3);
+        // Jeśli liczba sugestii jest mniejsza niż 3, dodajemy najczęstsze wartości z trainingData
+        if (suggestions.length < 3) {
+            const remainingSuggestions = 3 - suggestions.length;
+            const trainingSuggestions = this.getMostFrequentValues(fieldType, remainingSuggestions, suggestions);
+            suggestions = suggestions.concat(trainingSuggestions);
         }
     
         return suggestions;
     }
+    
+    getMostFrequentValues(fieldType, limit, excludeValues = []) {
+        const occurrenceMap = {};
+    
+        if (this.trainingData[fieldType] && this.trainingData[fieldType].length > 0) {
+            this.trainingData[fieldType].forEach(value => {
+                if (!excludeValues.includes(value)) { // Pomiń wartości, które są już w suggestions
+                    occurrenceMap[value] = (occurrenceMap[value] || 0) + 1;
+                }
+            });
+        }
+    
+        // Sortuj i wybierz top wartości
+        return Object.keys(occurrenceMap)
+                     .sort((a, b) => occurrenceMap[b] - occurrenceMap[a])
+                     .slice(0, limit);
+    }
+    
+    
+    
     
 
     generateCrossFieldSuggestions(fieldName, relatedFieldValue) {
