@@ -127,7 +127,7 @@ class FormFillerModel {
     
 
     updateCrossFieldChains(fieldName, fieldValue) {
-        const relevantFields = ['firstName', 'lastName', 'email', 'phone']; // Lista powiązanych pól
+        const relevantFields = ['firstName', 'lastName', 'email', 'phone', 'city'];
     
         relevantFields.forEach(relevantField => {
             if (relevantField === fieldName) return;
@@ -235,14 +235,14 @@ function getFieldType(element) {
     const className = (element.className || '').toLowerCase();
 
     const fieldPatterns = {
-        email: /\b(email|mail|e-?mail|username|user_name|user-name|fbclc_userName)\b/i,
+        email: /\b(email|mail|e-?mail|username|user_name|user-name|fbclc_userName|e_mail|e_post)\b/i,
         username: /\b(user(name)?|login|user_name|user-name)\b/i,
         firstName: /\b(first(name)?|imie|fname|given(name)?|first_name|first-name|tbname|userfirstname)\b/i,
         lastName: /\b(last(name)?|surname|nazwisko|lname|family(name)?|last_name|last-name|tbsurname|userlastname)\b/i,
         address: /\b(address|adres|addr|tbaddress)\b/i,
         phone: /\b(phone|tel|telefon|mobile|cell(phone)?|number|numertelefonu|tbphone|tbcellphone)\b/i,
-        city: /\b(city|miasto|tbcity)\b/i,
-        zip: /\b(zip|postal(code)?|tbzip)\b/i
+        city: /\b(city|miasto|tbcity)|town|urban|locality\b/i,
+        zip: /\b(zip|postal(code)?|tbzip|zipcode)\b/i
     };
 
     for (let [fieldType, regex] of Object.entries(fieldPatterns)) {
@@ -263,7 +263,7 @@ function getFieldType(element) {
         }
     }
 
-    // Fallback to input type for email and tel
+    // Dodatkowe sprawdzenie typu w wyjatkowych przypadkach
     if (element.type === 'email') return 'email';
     if (element.type === 'tel') return 'phone';
 
@@ -441,9 +441,7 @@ chrome.runtime.onMessage.addListener(async function(request, sender, sendRespons
 });
 
 function fillForm(profile) {
-    console.log('Received profile:', profile);
-
-    // Get all input elements on the page
+    
     const inputs = document.querySelectorAll('input, textarea, select');
 
     inputs.forEach(input => {
@@ -452,7 +450,6 @@ function fillForm(profile) {
             input.value = profile[fieldType];
             input.dispatchEvent(new Event('input', { bubbles: true }));
             input.dispatchEvent(new Event('change', { bubbles: true }));
-            console.log(`Filled ${fieldType} with value ${profile[fieldType]}`);
         }
     });
 }

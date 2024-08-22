@@ -70,14 +70,12 @@ async function decryptData(encryptedData) {
     return new TextDecoder().decode(decrypted);
 }
 
-// Function to store encrypted data in chrome.storage.local
 async function storeEncryptedData(dataKey, data) {
     const encryptedData = await encryptData(JSON.stringify(data));
     chrome.storage.local.set({ [dataKey]: encryptedData });
 }
 
 
-// Function to retrieve and decrypt data from chrome.storage.local
 async function retrieveDecryptedData(dataKey) {
     try {
         const result = await chrome.storage.local.get(dataKey);
@@ -88,7 +86,6 @@ async function retrieveDecryptedData(dataKey) {
         return null;
     } catch (error) {
         console.error('Error retrieving or decrypting data:', error);
-        return null; // Return null or handle the error gracefully
+        return null;
     }
 }
-

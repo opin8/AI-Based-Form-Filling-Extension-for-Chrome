@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     
         if (!validatePhoneNumber(phone)) {
-            showError('phoneError', 'Please enter a valid phone number with 9 digits.');
+            showError('phoneError', 'Please enter a valid phone number.');
             valid = false;
         }
     
@@ -218,8 +218,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert('Profile saved successfully');
                     loadProfileList();
                     toggleSection('profileForm');
-                    // Clear the form after saving
-                    resetErrorMessages(); // Hide error messages after saving
                     document.getElementById('profileForm').reset();
                 } else {
                     alert('Error saving profile');
@@ -452,7 +450,8 @@ document.getElementById('showModelData').addEventListener('click', async functio
     });
     
 
-    document.getElementById('clearStorage').addEventListener('click', function() {
+    document.getElementById('clearStorage').addEventListener('click', async function() {
+        // Czyszczenie local storage
         chrome.storage.local.clear(() => {
             if (chrome.runtime.lastError) {
                 console.error("Error clearing local storage:", chrome.runtime.lastError);
@@ -464,5 +463,24 @@ document.getElementById('showModelData').addEventListener('click', async functio
                 updateSavedDataPreview();
             }
         });
+    
+        // Czyszczenie IndexedDB
+        const request = indexedDB.deleteDatabase('CustomFillerDB');
+        
+        request.onsuccess = function() {
+            console.log("IndexedDB cleared successfully.");
+            alert('IndexedDB cleared successfully');
+        };
+        
+        request.onerror = function(event) {
+            console.error("Error clearing IndexedDB:", event.target.errorCode);
+            alert('Error clearing IndexedDB');
+        };
+        
+        request.onblocked = function() {
+            console.warn("IndexedDB clearing was blocked. Close all other tabs or windows using this database and try again.");
+            alert('IndexedDB clearing was blocked');
+        };
     });
+    
 });
