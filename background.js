@@ -7,7 +7,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 
     const key = await getKey();
     if (!key) {
-        // Generate and store the key if it doesn't exist
+        //Jesli klucz nie istnieje to stworz nowy
         const newKey = await generateKey();
         await storeKey(newKey);
         console.log('Encryption key generated and stored.');
@@ -60,7 +60,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 sendResponse({ status: 'Error', message: error.message || 'Unknown error' });
             }
         })();
-        return true; // Keeps the message channel open for asynchronous sendResponse
+        return true;
     }
 
     if (request.action === 'saveProfile') {
@@ -75,7 +75,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 sendResponse({ status: 'Error', message: error.message || 'Unknown error' });
             }
         })();
-        return true; // Keeps the message channel open for asynchronous sendResponse
+        return true;
     }
 
     if (request.action === 'loadProfiles') {
@@ -88,7 +88,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 sendResponse({ status: 'Error', message: error.message || 'Unknown error' });
             }
         })();
-        return true; // Keeps the message channel open for asynchronous sendResponse
+        return true;
     }
 });
-

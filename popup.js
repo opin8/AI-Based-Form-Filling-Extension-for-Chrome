@@ -46,9 +46,9 @@ function toggleSection(sectionId) {
 
 async function updateSavedDataPreview() {
     try {
-        const result = await retrieveDecryptedData('trainingData') || {};  // Provide an empty object as a fallback
-        const lastUsedValues = result.lastUsedValues || {};  // Default to an empty object if null or undefined
-        const trainingData = result.trainingData || {};  // Default to an empty object if null or undefined
+        const result = await retrieveDecryptedData('trainingData') || {};
+        const lastUsedValues = result.lastUsedValues || {};
+        const trainingData = result.trainingData || {};
         
         const previewDiv = document.getElementById('savedDataPreview');
         previewDiv.innerHTML = '<h3>Saved Data:</h3>';
@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('addressInput').value = '';
         document.getElementById('cityInput').value = '';
         document.getElementById('zipInput').value = '';
-        resetErrorMessages(); // Resetujemy błędy przy otwieraniu formularza
+        resetErrorMessages();
     });
     
     document.getElementById('saveProfile').addEventListener('click', function() {
@@ -197,7 +197,6 @@ document.addEventListener('DOMContentLoaded', function() {
             valid = false;
         }
     
-        // Jeśli wszystkie pola są poprawne, profil może zostać zapisany
         if (valid) {
             const newProfile = {
                 name: profileName,
@@ -218,7 +217,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert('Profile saved successfully');
                     loadProfileList();
                     toggleSection('profileForm');
-                    document.getElementById('profileForm').reset();
                 } else {
                     alert('Error saving profile');
                 }
@@ -237,7 +235,6 @@ document.addEventListener('DOMContentLoaded', function() {
         errorElement.style.display = 'block';
     }
     
-    // Funkcje walidacji
     function validateEmail(email) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
@@ -249,13 +246,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function validateFirstName(firstName) {
-        const nameRegex = /^[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžæÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð ,.'-]+$/u;
-        return firstName.length >= 2 && nameRegex.test(firstName);
+        const firstNameRegex = /^[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžæÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð ,.'-]+$/u;
+        return firstName.length >= 2 && firstNameRegex.test(firstName);
     }
     
     function validateLastName(lastName) {
-        const nameRegex = /^[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžæÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð ,.'-]+$/u;
-        return lastName.length >= 2 && nameRegex.test(lastName);
+        const lastNameRegex = /^[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžæÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð ,.'-]+$/u;
+        return lastName.length >= 2 && lastNameRegex.test(lastName);
     }
     
     
@@ -314,7 +311,6 @@ document.addEventListener('DOMContentLoaded', function() {
             for (let fieldType in trainingData) {
                 const valueCount = {};
     
-                // If markovChains have data, use it
                 if (markovChains[fieldType]) {
                     for (let currentValue in markovChains[fieldType]) {
                         for (let nextValue in markovChains[fieldType][currentValue]) {
@@ -327,17 +323,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
     
-                // Add any missing values from trainingData
                 trainingData[fieldType].forEach(value => {
                     if (!valueCount[value]) {
                         valueCount[value] = 1;
                     }
                 });
     
-                // Sort values by frequency (descending)
                 const sortedValues = Object.keys(valueCount).sort((a, b) => valueCount[b] - valueCount[a]);
     
-                // Get up to 5 most frequent values
+                // wybierz do 5 najczesciej wystepujacych wartosci
                 const topSuggestions = sortedValues.slice(0, 5);
     
                 if (topSuggestions.length > 0) {
@@ -359,7 +353,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 document.getElementById('showModelData').addEventListener('click', async function() {
     try {
-        const result = await retrieveDecryptedData('trainingData');  // Ensure result is at least an empty object
+        const result = await retrieveDecryptedData('trainingData');
         const modelDataContainer = document.getElementById('modelDataContainer');
         modelDataContainer.innerHTML = '<h3>Model Data:</h3>';
 
@@ -426,10 +420,11 @@ document.getElementById('showModelData').addEventListener('click', async functio
                 try {
                     const importedProfiles = JSON.parse(e.target.result);
     
-                    // Check if imported profiles have the right structure
+                    // Sprawdz czy profile maja poprawna strukture
                     for (let profileName in importedProfiles) {
                         const profile = importedProfiles[profileName];
-                        if (!profile.name || !profile.email || !profile.firstName || !profile.lastName || !profile.address || !profile.city || !profile.zip) {
+                        if (!profile.name || !profile.email || !profile.firstName ||
+                             !profile.lastName || !profile.address || !profile.city || !profile.zip) {
                             alert(`Profile ${profileName} is missing some data. Please check the structure.`);
                             return;
                         }
@@ -451,7 +446,7 @@ document.getElementById('showModelData').addEventListener('click', async functio
     
 
     document.getElementById('clearStorage').addEventListener('click', async function() {
-        // Czyszczenie local storage
+
         chrome.storage.local.clear(() => {
             if (chrome.runtime.lastError) {
                 console.error("Error clearing local storage:", chrome.runtime.lastError);
@@ -463,24 +458,6 @@ document.getElementById('showModelData').addEventListener('click', async functio
                 updateSavedDataPreview();
             }
         });
-    
-        // Czyszczenie IndexedDB
-        const request = indexedDB.deleteDatabase('CustomFillerDB');
-        
-        request.onsuccess = function() {
-            console.log("IndexedDB cleared successfully.");
-            alert('IndexedDB cleared successfully');
-        };
-        
-        request.onerror = function(event) {
-            console.error("Error clearing IndexedDB:", event.target.errorCode);
-            alert('Error clearing IndexedDB');
-        };
-        
-        request.onblocked = function() {
-            console.warn("IndexedDB clearing was blocked. Close all other tabs or windows using this database and try again.");
-            alert('IndexedDB clearing was blocked');
-        };
     });
     
 });

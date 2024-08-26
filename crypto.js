@@ -11,13 +11,11 @@ async function generateKey() {
     );
 }
 
-// Function to store the generated key securely in chrome.storage.local
 async function storeKey(key) {
     const exportedKey = await self.crypto.subtle.exportKey("jwk", key);
     chrome.storage.local.set({ encryptionKey: exportedKey });
 }
 
-// Function to retrieve the stored key from chrome.storage.local
 async function getKey() {
     const result = await chrome.storage.local.get('encryptionKey');
     if (result.encryptionKey) {
@@ -36,7 +34,6 @@ async function getKey() {
     }
 }
 
-// Function to encrypt data before storing it
 async function encryptData(plaintext) {
 
     const key = await getKey();
@@ -53,7 +50,6 @@ async function encryptData(plaintext) {
     return { iv: Array.from(iv), data: Array.from(new Uint8Array(ciphertext)) };
 }
 
-// Function to decrypt data after retrieving it
 async function decryptData(encryptedData) {
     const key = await getKey();
     if (!key) {
