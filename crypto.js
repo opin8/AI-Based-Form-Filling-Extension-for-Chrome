@@ -1,5 +1,3 @@
-// crypto.js
-
 async function generateKey() {
     return self.crypto.subtle.generateKey(
         {
