@@ -41,7 +41,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     wordCounts[fieldName] = {};
                 }
 
-                // Aktualizacja liczników słów
                 const latestEntry = fieldValue;
                 if (!wordCounts[fieldName][latestEntry]) {
                     wordCounts[fieldName][latestEntry] = 0;

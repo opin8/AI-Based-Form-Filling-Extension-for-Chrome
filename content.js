@@ -15,9 +15,8 @@ class FormFillerModel {
     }
 
     async updateModel(fieldName, fieldValue) {
-        if (fieldValue.length <= 2) return; // Ignoruj krótkie wpisy
+        if (fieldValue.length <= 2) return;
 
-        // Walidacja w zależności od typu pola
         switch (fieldName) {
             case 'phone':
                 if (!validatePhoneNumber(fieldValue)) return;
@@ -51,7 +50,6 @@ class FormFillerModel {
         this.updateWordCounts(fieldName);
         this.updateCrossFieldChains(fieldName, fieldValue);
     
-        // Poczekaj na zakończenie zapisu
         await this.saveTrainingData();
         console.log('Data saved successfully');
 
@@ -341,9 +339,8 @@ function handleInputFocus(event) {
     const suggestionBox = showSuggestions(target, fieldType);
 
     if (suggestionBox) {
-        // Add blur event listener to the input field
         target.addEventListener('blur', function blurHandler(e) {
-            // Small delay to allow for clicking on suggestion
+            //male opoznienie aby moc kliknac na sugestie
             setTimeout(() => {
                 if (suggestionBox && suggestionBox.parentNode) {
                     suggestionBox.remove();
@@ -352,7 +349,6 @@ function handleInputFocus(event) {
             }, 200);
         });
 
-        // Add click event listener to the document
         document.addEventListener('click', function clickHandler(e) {
             if (!suggestionBox.contains(e.target) && e.target !== target) {
                 suggestionBox.remove();
@@ -483,7 +479,7 @@ chrome.runtime.onMessage.addListener(async function(request, sender, sendRespons
             console.error('Error in getModelData:', error);
             sendResponse({ error: 'Failed to retrieve model data' });
         }
-        return true;  // Indicate that we will send a response asynchronously
+        return true;
     }
     return true;
 });
