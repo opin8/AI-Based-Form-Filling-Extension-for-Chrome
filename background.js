@@ -28,32 +28,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             try {
                 const result = await retrieveDecryptedData('trainingData');
                 let trainingData = result?.trainingData || {};
-                let markovChains = result?.markovChains || {};
-
+                let wordCounts = result?.wordCounts || {};
                 const { fieldName, fieldValue } = request;
+
                 if (!trainingData[fieldName]) {
                     trainingData[fieldName] = [];
                 }
                 trainingData[fieldName].push(fieldValue);
                 trainingData[fieldName] = trainingData[fieldName].slice(-20);
 
-                if (!markovChains[fieldName]) {
-                    markovChains[fieldName] = {};
-                }
-                const data = trainingData[fieldName];
-                for (let i = 0; i < data.length - 1; i++) {
-                    const current = data[i];
-                    const next = data[i + 1];
-                    if (!markovChains[fieldName][current]) {
-                        markovChains[fieldName][current] = {};
-                    }
-                    if (!markovChains[fieldName][current][next]) {
-                        markovChains[fieldName][current][next] = 0;
-                    }
-                    markovChains[fieldName][current][next]++;
+                if (!wordCounts[fieldName]) {
+                    wordCounts[fieldName] = {};
                 }
 
-                await storeEncryptedData('trainingData', { trainingData, markovChains });
+                // Aktualizacja liczników słów
+                const latestEntry = fieldValue;
+                if (!wordCounts[fieldName][latestEntry]) {
+                    wordCounts[fieldName][latestEntry] = 0;
+                }
+                wordCounts[fieldName][latestEntry]++;
+
+                await storeEncryptedData('trainingData', { trainingData, wordCounts });
+
                 sendResponse({ status: 'Data updated' });
             } catch (error) {
                 console.error('Error training model:', error);
@@ -81,7 +77,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'loadProfiles') {
         (async () => {
             try {
-                const profiles = await retrieveDecryptedData('profiles') || {};
+                const profiles = await retrieveDecryptedData('profiles');
                 sendResponse({ profiles });
             } catch (error) {
                 console.error('Error loading profiles:', error);
@@ -90,4 +86,5 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         })();
         return true;
     }
+    return true;
 });

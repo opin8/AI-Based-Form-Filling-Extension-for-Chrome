@@ -234,43 +234,6 @@ document.addEventListener('DOMContentLoaded', function() {
         errorElement.textContent = message;
         errorElement.style.display = 'block';
     }
-    
-    function validateEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-    
-    function validatePhoneNumber(phone) {
-        const phoneRegex = /^(\+48)?\d{9}$/;
-        return phoneRegex.test(phone.replace(/\s+/g, ''));
-    }
-    
-    function validateFirstName(firstName) {
-        const firstNameRegex = /^[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžæÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð ,.'-]+$/u;
-        return firstName.length >= 2 && firstNameRegex.test(firstName);
-    }
-    
-    function validateLastName(lastName) {
-        const lastNameRegex = /^[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžæÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð ,.'-]+$/u;
-        return lastName.length >= 2 && lastNameRegex.test(lastName);
-    }
-    
-    
-    function validateAddress(address) {
-        const addressRegex = /^[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžæÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð]+\s\d+[\/]?\d*$/;
-        return addressRegex.test(address);
-    }
-    
-    function validateCity(city) {
-        const cityRegex = /^[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžæÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð ,.'-]+$/u;
-        return city.length >= 2 && cityRegex.test(city);
-    }
-    
-    function validateZipCode(zip) {
-        const zipRegex = /^\d{2}-\d{3}$/;
-        return zipRegex.test(zip);
-    }
-    
 
     document.getElementById('deleteProfile').addEventListener('click', async function() {
         if (currentProfile) {
@@ -300,38 +263,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const result = await retrieveDecryptedData('trainingData');
             const suggestionsContainer = document.getElementById('suggestionsContainer');
             suggestionsContainer.innerHTML = '<h3>Suggestions:</h3>';
-            const trainingData = result.trainingData || {};
-            const markovChains = result.markovChains || {};
+            const wordCounts = result.wordCounts || {};
     
-            if (Object.keys(trainingData).length === 0) {
-                suggestionsContainer.innerHTML += '<p>No suggestions available</p>';
-                return;
-            }
+            for (let fieldType in wordCounts) {
+                const sortedValues = Object.keys(wordCounts[fieldType])
+                    .sort((a, b) => wordCounts[fieldType][b] - wordCounts[fieldType][a]);
     
-            for (let fieldType in trainingData) {
-                const valueCount = {};
-    
-                if (markovChains[fieldType]) {
-                    for (let currentValue in markovChains[fieldType]) {
-                        for (let nextValue in markovChains[fieldType][currentValue]) {
-                            if (valueCount[nextValue]) {
-                                valueCount[nextValue] += markovChains[fieldType][currentValue][nextValue];
-                            } else {
-                                valueCount[nextValue] = markovChains[fieldType][currentValue][nextValue];
-                            }
-                        }
-                    }
-                }
-    
-                trainingData[fieldType].forEach(value => {
-                    if (!valueCount[value]) {
-                        valueCount[value] = 1;
-                    }
-                });
-    
-                const sortedValues = Object.keys(valueCount).sort((a, b) => valueCount[b] - valueCount[a]);
-    
-                // wybierz do 5 najczesciej wystepujacych wartosci
                 const topSuggestions = sortedValues.slice(0, 5);
     
                 if (topSuggestions.length > 0) {
@@ -340,48 +277,48 @@ document.addEventListener('DOMContentLoaded', function() {
                     suggestionsContainer.appendChild(fieldDiv);
                 }
             }
-    
-            if (suggestionsContainer.innerHTML === '<h3>Suggestions:</h3>') {
-                suggestionsContainer.innerHTML += '<p>No suggestions available</p>';
-            }
         } catch (error) {
             console.error('Error showing suggestions:', error);
+            suggestionsContainer.innerHTML += '<p>No suggestions available</p>';
         }
         toggleSection('suggestionsContainer');
     });
     
+    
+    
+    
 
-document.getElementById('showModelData').addEventListener('click', async function() {
-    try {
-        const result = await retrieveDecryptedData('trainingData');
-        const modelDataContainer = document.getElementById('modelDataContainer');
-        modelDataContainer.innerHTML = '<h3>Model Data:</h3>';
-
-        if (
-            (!result.trainingData || Object.keys(result.trainingData).length === 0) &&
-            (!result.markovChains || Object.keys(result.markovChains).length === 0) &&
-            (!result.crossFieldChains || Object.keys(result.crossFieldChains).length === 0)
-        ) {
-            modelDataContainer.innerHTML += '<p>No model data available</p>';
-            return;
+    document.getElementById('showModelData').addEventListener('click', async function() {
+        try {
+            const result = await retrieveDecryptedData('trainingData');
+            const modelDataContainer = document.getElementById('modelDataContainer');
+            modelDataContainer.innerHTML = '<h3>Model Data:</h3>';
+    
+            if (
+                (!result.trainingData || Object.keys(result.trainingData).length === 0) &&
+                (!result.wordCounts || Object.keys(result.wordCounts).length === 0) &&
+                (!result.crossFieldChains || Object.keys(result.crossFieldChains).length === 0)
+            ) {
+                modelDataContainer.innerHTML += '<p>No model data available</p>';
+                return;
+            }
+    
+            const modelData = {
+                trainingData: result.trainingData || {},
+                wordCounts: result.wordCounts || {},
+                crossFieldChains: result.crossFieldChains || {}
+            };
+    
+            const pre = document.createElement('pre');
+            pre.textContent = JSON.stringify(modelData, null, 2);
+            modelDataContainer.appendChild(pre);
+    
+            toggleSection('modelDataContainer');
+        } catch (error) {
+            console.error('Error showing model data:', error);
         }
-
-        const modelData = {
-            trainingData: result.trainingData || {},
-            markovChains: result.markovChains || {},
-            crossFieldChains: result.crossFieldChains || {}
-        };
-
-        const pre = document.createElement('pre');
-        pre.textContent = JSON.stringify(modelData, null, 2);
-        modelDataContainer.appendChild(pre);
-
-        toggleSection('modelDataContainer');
-    } catch (error) {
-        console.error('Error showing model data:', error);
-    }
-});
-
+    });
+    
 
 
     document.getElementById('exportProfiles').addEventListener('click', function() {
@@ -401,7 +338,7 @@ document.getElementById('showModelData').addEventListener('click', async functio
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(profiles));
             const downloadAnchorNode = document.createElement('a');
             downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", "form_filler_profiles.json");
+            downloadAnchorNode.setAttribute("download", "custom_filler_profiles.json");
             document.body.appendChild(downloadAnchorNode);
             downloadAnchorNode.click();
             downloadAnchorNode.remove();

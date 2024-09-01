@@ -1,7 +1,7 @@
 class FormFillerModel {
     constructor() {
         this.trainingData = {};
-        this.markovChains = {};
+        this.wordCounts = {};
         this.crossFieldChains = {};
         this.minOccurrencesForSuggestion = 2;
         this.loadTrainingData();
@@ -10,71 +10,35 @@ class FormFillerModel {
     async loadTrainingData() {
         const trainingData = await retrieveDecryptedData('trainingData');
         this.trainingData = trainingData?.trainingData || {};
-        this.markovChains = trainingData?.markovChains || {};
+        this.wordCounts = trainingData?.wordCounts || {};
         this.crossFieldChains = trainingData?.crossFieldChains || {};
     }
-    
 
-    validatePhoneNumber(phone) {
-        const phoneRegex = /^(\+48)?\d{9}$/;
-        return phoneRegex.test(phone.replace(/\s+/g, ''));
-    }
-
-    validateEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-
-    validateFirstName(firstName) {
-        const nameRegex = /^[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžæÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð ,.'-]+$/u;
-        return firstName.length >= 2 && nameRegex.test(firstName);
-    }
-    
-    validateLastName(lastName) {
-        const nameRegex = /^[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžæÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð ,.'-]+$/u;
-        return lastName.length >= 2 && nameRegex.test(lastName);
-    }
-
-    validateZipCode(zipCode) {
-        const zipRegex = /^\d{2}-\d{3}$/; // Polski format kodu pocztowego
-        return zipRegex.test(zipCode);
-    }
-
-    validateAddress(address) {
-        const addressRegex = /^[A-Za-z0-9\s,.'-]{3,}$/;
-        return addressRegex.test(address);
-    }
-
-    validateCity(city) {
-        const cityRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]+$/;
-        return city.length >= 2 && cityRegex.test(city);
-    }
-
-    updateModel(fieldName, fieldValue) {
+    async updateModel(fieldName, fieldValue) {
         if (fieldValue.length <= 2) return; // Ignoruj krótkie wpisy
 
         // Walidacja w zależności od typu pola
         switch (fieldName) {
             case 'phone':
-                if (!this.validatePhoneNumber(fieldValue)) return;
+                if (!validatePhoneNumber(fieldValue)) return;
                 break;
             case 'email':
-                if (!this.validateEmail(fieldValue)) return;
+                if (!validateEmail(fieldValue)) return;
                 break;
             case 'firstName':
-                if (!this.validateFirstName(fieldValue)) return;
+                if (!validateFirstName(fieldValue)) return;
                 break;
             case 'lastName':
-                if (!this.validateLastName(fieldValue)) return;
+                if (!validateLastName(fieldValue)) return;
                 break;
             case 'zipCode':
-                if (!this.validateZipCode(fieldValue)) return;
+                if (!validateZipCode(fieldValue)) return;
                 break;
             case 'address':
-                if (!this.validateAddress(fieldValue)) return;
+                if (!validateAddress(fieldValue)) return;
                 break;
             case 'city':
-                if (!this.validateCity(fieldValue)) return;
+                if (!validateCity(fieldValue)) return;
                 break;
         }
 
@@ -83,47 +47,52 @@ class FormFillerModel {
         }
         this.trainingData[fieldName].push(fieldValue);
         this.trainingData[fieldName] = this.trainingData[fieldName].slice(-20);
-
-        this.updateMarkovChain(fieldName);
+    
+        this.updateWordCounts(fieldName);
         this.updateCrossFieldChains(fieldName, fieldValue);
-        this.saveTrainingData();
+    
+        // Poczekaj na zakończenie zapisu
+        await this.saveTrainingData();
+        console.log('Data saved successfully');
+
     }
 
     async saveTrainingData() {
+        // Pobierz istniejące dane
+        const existingData = await retrieveDecryptedData('trainingData') || {};
+    
+        // Połącz istniejące dane z nowymi
         const data = {
-            trainingData: this.trainingData,
-            markovChains: this.markovChains,
-            crossFieldChains: this.crossFieldChains
+            trainingData: {
+                ...existingData.trainingData,
+                ...this.trainingData
+            },
+            wordCounts: {
+                ...existingData.wordCounts,
+                ...this.wordCounts
+            },
+            crossFieldChains: {
+                ...existingData.crossFieldChains,
+                ...this.crossFieldChains
+            }
         };
         await storeEncryptedData('trainingData', data);
     }
 
-    updateMarkovChain(fieldName) {
-        const data = this.trainingData[fieldName];
-        if (!this.markovChains[fieldName]) {
-            this.markovChains[fieldName] = {};
-        }
-    
-        for (let i = 0; i < data.length - 1; i++) {
-            const current = data[i];
-            const next = data[i + 1];
-            if (!this.markovChains[fieldName][current]) {
-                this.markovChains[fieldName][current] = {};
-            }
-            if (!this.markovChains[fieldName][current][next]) {
-                this.markovChains[fieldName][current][next] = 0;
-            }
-            this.markovChains[fieldName][current][next]++;
-    
-            // Limitowanie liczby powiązań do 20 ostatnich
-            const keys = Object.keys(this.markovChains[fieldName][current]);
-            if (keys.length > 20) {
-                keys.slice(0, keys.length - 20).forEach(key => {
-                    delete this.markovChains[fieldName][current][key];
-                });
-            }
-        }
+    updateWordCounts(fieldName) {
+    const data = this.trainingData[fieldName];
+    if (!this.wordCounts[fieldName]) {
+        this.wordCounts[fieldName] = {};
     }
+
+    // Iteruj po ostatnim dodanym elemencie, aby dodać tylko jeden do licznika
+    const latestEntry = data[data.length - 1];  // Ostatni dodany element
+    if (!this.wordCounts[fieldName][latestEntry]) {
+        this.wordCounts[fieldName][latestEntry] = 0;
+    }
+    this.wordCounts[fieldName][latestEntry]++;
+}
+
     
 
     updateCrossFieldChains(fieldName, fieldValue) {
@@ -161,7 +130,7 @@ class FormFillerModel {
         let suggestions = [];
         const occurrenceMap = {};
     
-        // Przechodzimy przez wszystkie wprowadzone wartości w currentFormData
+        // Jeśli istnieją dane w crossFieldChains, użyj ich do generowania sugestii
         for (const [previousFieldType, previousValue] of Object.entries(currentFormData)) {
             if (this.crossFieldChains[fieldType] && this.crossFieldChains[fieldType][previousValue]) {
                 const possibleNext = this.crossFieldChains[fieldType][previousValue];
@@ -171,35 +140,35 @@ class FormFillerModel {
                 }
             }
         }
-
-        // Przenosimy wartości z occurrenceMap do tablicy suggestions
+    
+        // Generowanie sugestii na podstawie crossFieldChains
         suggestions = Object.keys(occurrenceMap).sort((a, b) => occurrenceMap[b] - occurrenceMap[a]);
     
-        // Jeśli liczba sugestii jest mniejsza niż 3, dodajemy najczęstsze wartości z trainingData
+        // Jeśli mniej niż 3 sugestie, uzupełnij najczęściej występującymi słowami z trainingData
         if (suggestions.length < 3) {
             const remainingSuggestions = 3 - suggestions.length;
             const trainingSuggestions = this.getMostFrequentValues(fieldType, remainingSuggestions, suggestions);
             suggestions = suggestions.concat(trainingSuggestions);
         }
     
-        return suggestions;
+        return suggestions.slice(0, 3);  // Zwróć maksymalnie 3 sugestii
     }
+    
     
     getMostFrequentValues(fieldType, limit, excludeValues = []) {
         const occurrenceMap = {};
     
-        if (this.trainingData[fieldType] && this.trainingData[fieldType].length > 0) {
-            this.trainingData[fieldType].forEach(value => {
-                if (!excludeValues.includes(value)) { // Pomiń wartości, które są już w suggestions
-                    occurrenceMap[value] = (occurrenceMap[value] || 0) + 1;
+        if (this.wordCounts[fieldType]) {
+            for (let value in this.wordCounts[fieldType]) {
+                if (!excludeValues.includes(value)) {
+                    occurrenceMap[value] = this.wordCounts[fieldType][value];
                 }
-            });
+            }
         }
     
-        // Sortuj i wybierz top wartości
         return Object.keys(occurrenceMap)
-                     .sort((a, b) => occurrenceMap[b] - occurrenceMap[a])
-                     .slice(0, limit);
+            .sort((a, b) => occurrenceMap[b] - occurrenceMap[a])
+            .slice(0, limit);
     }
     
     
@@ -227,48 +196,115 @@ class FormFillerModel {
 
 const formFillerModel = new FormFillerModel();
 
-function getFieldType(element) {
-    if (!element || !element.tagName) return null;
+const fuzzyPatterns = {
+    email: ['email', 'mail', 'e-mail', 'username', 'user_name', 'user-name'],
+    firstName: ['firstname', 'fname', 'givenname', 'imie', 'first_name', 'first-name', 'name'],
+    lastName: ['lastname', 'surname', 'lname', 'nazwisko', 'last_name', 'last-name'],
+    address: ['address', 'adres', 'addr', 'street', 'ulica'],
+    phone: ['phone', 'tel', 'telefon', 'mobile', 'cellphone', 'number', 'numer', 'phonenumber'],
+    city: ['city', 'miasto', 'town', 'locality'],
+    zip: ['zip', 'postal', 'postcode', 'kod', 'pocztowy']
+};
 
-    const name = (element.name || '').toLowerCase();
-    const id = (element.id || '').toLowerCase();
-    const className = (element.className || '').toLowerCase();
+const fuzzySets = {};
+for (let [type, patterns] of Object.entries(fuzzyPatterns)) {
+    fuzzySets[type] = FuzzySet(patterns);
+}
 
-    const fieldPatterns = {
-        email: /\b(email|mail|e-?mail|username|user_name|user-name|fbclc_userName|e_mail|e_post)\b/i,
-        username: /\b(user(name)?|login|user_name|user-name)\b/i,
-        firstName: /\b(first(name)?|imie|fname|given(name)?|first_name|first-name|tbname|userfirstname)\b/i,
-        lastName: /\b(last(name)?|surname|nazwisko|lname|family(name)?|last_name|last-name|tbsurname|userlastname)\b/i,
-        address: /\b(address|adres|addr|tbaddress)\b/i,
-        phone: /\b(phone|tel|telefon|mobile|cell(phone)?|number|numertelefonu|tbphone|tbcellphone)\b/i,
-        city: /\b(city|miasto|tbcity)|town|urban|locality\b/i,
-        zip: /\b(zip|postal(code)?|tbzip|zipcode)\b/i
-    };
+function splitIdentifier(identifier) {
+    // Podział na podstawie znaków specjalnych
+    return identifier.split(/[\$_\-\.:\s\/\\\[\]#@]+/).filter(Boolean);
+}
 
-    for (let [fieldType, regex] of Object.entries(fieldPatterns)) {
-        if (regex.test(name) || regex.test(id) || regex.test(className)) {
-            return fieldType;
-        }
+function splitCamelCase(part) {
+    return part.split(/(?=[A-Z])/).filter(Boolean);
+}
+
+function getFieldTypeWithFuzzyMatching(element) {
+    const autocompleteValue = element.getAttribute('autocomplete') || '';
+
+    const nameParts = splitIdentifier(element.name || '');
+    const idParts = splitIdentifier(element.id || '');
+    const classNameParts = splitIdentifier(element.className || '');
+    const dataTestParts = splitIdentifier(element.getAttribute('data-test') || '');
+    const automationIdParts = splitIdentifier(element.getAttribute('data-automation-id') || '');
+    const autocompleteParts = splitIdentifier(element.getAttribute('autocomplete') || '');
+
+    const allParts = [...nameParts, ...idParts, ...classNameParts, ...dataTestParts, ...automationIdParts, ...autocompleteParts];
+
+    if (autocompleteValue) {
+        allParts.push(autocompleteValue);
     }
 
-    // Check for ASP.NET style naming
-    const aspNetPattern = /(?:ctl\d+\$)?(?:\w+Content\$)?(?:ctl\d+\$)?tb(\w+)$/i;
-    const aspNetMatch = name.match(aspNetPattern) || id.match(aspNetPattern);
-    if (aspNetMatch) {
-        const fieldName = aspNetMatch[1].toLowerCase();
-        for (let [fieldType, regex] of Object.entries(fieldPatterns)) {
-            if (regex.test(fieldName)) {
-                return fieldType;
+    console.log('All parts to check:', allParts);
+
+    if (element.type === 'email') return 'email';
+    if (element.type === 'tel') return 'phone';
+
+    let bestMatch = null;
+    let highestScore = 0;
+
+    // Faza 1: Sprawdzanie połączonych sekcji (np. "last-name-input")
+    for (let i = 0; i < allParts.length; i++) {
+        for (let j = i + 1; j <= allParts.length; j++) {
+            let combinedPart = allParts.slice(i, j).join('');
+            matchAndUpdate(combinedPart);
+            if (highestScore === 1) return bestMatch;
+        }
+    }
+    // Faza 2: Sprawdzanie całych sekcji
+    for (let part of allParts) {
+        matchAndUpdate(part);
+        if (highestScore === 1) return bestMatch;
+    }
+    // Faza 3: Podział camelCase, jeśli nie ma wyniku o wartości 1
+    for (let part of allParts) {
+        let camelCaseParts = splitCamelCase(part);
+        camelCaseParts.forEach(camelPart => {
+            matchAndUpdate(camelPart);
+        });
+    }
+
+    function matchAndUpdate(part) {
+        if (highestScore === 1) {
+            return; // Jeśli już mamy wynik 1, nie wykonuj dalszych sprawdzeń ani wyświetlania.
+        }
+        for (let [fieldType, fuzzySet] of Object.entries(fuzzySets)) {
+            const results = fuzzySet.get(part);
+            if (results) {
+                const [score, match] = results[0];
+                console.log(`Part: "${part}" matched as "${fieldType}" with score: ${score}`);
+
+                if (score > highestScore || (score === highestScore && part.length > (bestMatch?.length || 0))) {
+                    highestScore = score;
+                    bestMatch = fieldType;
+                }
+
+                if (score === 1) return;
             }
         }
     }
 
-    // Dodatkowe sprawdzenie typu w wyjatkowych przypadkach
-    if (element.type === 'email') return 'email';
-    if (element.type === 'tel') return 'phone';
+    if (highestScore > 0.7) return bestMatch;
+
+    // Heurystyka dla autocomplete
+    if (autocompleteParts.includes('email') || automationIdParts.includes('email')) {
+        return 'email';
+    }
+    if (highestScore > 0.3 && allParts.some(part => part.includes('email'))) {
+        return 'email';
+    }
+    if (highestScore > 0.3 && allParts.some(part => part.includes('phone'))) {
+        return 'phone';
+    }
 
     return null;
 }
+
+
+
+
+
 
 async function handleInputBlur(event) {
     const target = event.target;
@@ -276,7 +312,7 @@ async function handleInputBlur(event) {
 
     console.log('Blur event on element:', target.name, target.id, target.className);
 
-    const fieldType = getFieldType(target);
+    const fieldType = getFieldTypeWithFuzzyMatching(target);
     console.log('Field type detected:', fieldType, 'for element:', target.name, target.id);
 
     if (!fieldType) {
@@ -296,9 +332,10 @@ async function handleInputBlur(event) {
     }
 }
 
+
 function handleInputFocus(event) {
     const target = event.target;
-    const fieldType = getFieldType(target);
+    const fieldType = getFieldTypeWithFuzzyMatching(target);
     if (!fieldType) return;
 
     const suggestionBox = showSuggestions(target, fieldType);
@@ -324,6 +361,7 @@ function handleInputFocus(event) {
         });
     }
 }
+
 
 function showSuggestions(target, fieldType) {
     let suggestionBox = target.nextSibling;
@@ -418,7 +456,7 @@ chrome.runtime.onMessage.addListener(async function(request, sender, sendRespons
             const allSuggestions = formFillerModel.getAllSuggestions();
             sendResponse({suggestions: allSuggestions});
         });
-        return true; // Indicate asynchronous response
+        return true;
     }
     
      else if (request.action === 'getAllSuggestions') {
@@ -426,26 +464,35 @@ chrome.runtime.onMessage.addListener(async function(request, sender, sendRespons
             const allSuggestions = formFillerModel.getAllSuggestions();
             sendResponse({suggestions: allSuggestions});
         });
-        return true; // Indicate asynchronous response
+        return true;
     } else if (request.action === 'getSavedData') {
         const result = await retrieveDecryptedData('lastUsedValues') || {};
         sendResponse({ savedData: result });
         return true;
     } else if (request.action === 'getModelData') {
-        sendResponse({modelData: {
-            trainingData: formFillerModel.trainingData,
-            markovChains: formFillerModel.markovChains
-        }});
+        try {
+            const response = {
+                modelData: {
+                    trainingData: formFillerModel.trainingData,
+                    wordCounts: formFillerModel.wordCounts,
+                    crossFieldChains: formFillerModel.crossFieldChains
+                }
+            };
+            sendResponse(response);
+        } catch (error) {
+            console.error('Error in getModelData:', error);
+            sendResponse({ error: 'Failed to retrieve model data' });
+        }
+        return true;  // Indicate that we will send a response asynchronously
     }
     return true;
 });
 
 function fillForm(profile) {
-    
     const inputs = document.querySelectorAll('input, textarea, select');
 
     inputs.forEach(input => {
-        const fieldType = getFieldType(input);
+        const fieldType = getFieldTypeWithFuzzyMatching(input);
         if (fieldType && profile[fieldType]) {
             input.value = profile[fieldType];
             input.dispatchEvent(new Event('input', { bubbles: true }));
