@@ -299,15 +299,12 @@ function getFieldTypeWithFuzzyMatching(element) {
     return null;
 }
 
-
-
-
-
-
 async function handleInputBlur(event) {
     const target = event.target;
-    if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') return;
-
+    if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+        console.log('Ignoring non-text input:', target.tagName);
+        return;
+    }
     console.log('Blur event on element:', target.name, target.id, target.className);
 
     const fieldType = getFieldTypeWithFuzzyMatching(target);
@@ -330,9 +327,14 @@ async function handleInputBlur(event) {
     }
 }
 
-
 function handleInputFocus(event) {
     const target = event.target;
+
+    if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+        console.log('Ignoring non-text input:', target.tagName);
+        return;
+    }
+
     const fieldType = getFieldTypeWithFuzzyMatching(target);
     if (!fieldType) return;
 
